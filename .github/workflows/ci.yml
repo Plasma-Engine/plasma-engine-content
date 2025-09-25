@@ -9,10 +9,10 @@ jobs:
   lint-test:
     uses: Plasma-Engine/plasma-engine-infra/.github/workflows/lint-test.yml@main
     with:
-      python: "[]"
-      node: "['20']"
+      python: "['3.11']"
+      node: "['18']"
 
   security:
     uses: Plasma-Engine/plasma-engine-infra/.github/workflows/security-scan.yml@main
     with:
-      run_pip_audit: false
+      run_npm_audit: true
