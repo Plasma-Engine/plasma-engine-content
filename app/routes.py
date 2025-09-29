@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Depends, HTTPException
 from prometheus_client import Counter
 from pydantic import BaseModel
 
 from app.settings import get_settings
+from app.db import get_db
+from app.models import ContentItem
+from app.schemas import ContentOut
 
 
 api = APIRouter(prefix="/api/v1", tags=["api"])
@@ -40,11 +43,32 @@ def _generate_content(topic: str, style: str | None) -> tuple[str, str]:
 
 
 @api.post("/content/generate", response_model=GenerateResponse)
-def generate(req: GenerateRequest) -> GenerateResponse:
+def generate(req: GenerateRequest, db=Depends(get_db)) -> GenerateResponse:
     content_id, text = _generate_content(req.topic, req.style)
     provider = get_settings().model_provider
     _gen_counter.labels(provider=provider).inc()
+    # Persist
+    item = ContentItem(id=content_id, topic=req.topic, style=req.style, content=text, provider=provider)
+    db.add(item)
+    try:
+        db.flush()
+    except Exception:
+        db.rollback()
     return GenerateResponse(id=content_id, content=text, provider=provider)
+
+
+@api.get("/content/{content_id}", response_model=ContentOut)
+def get_content(content_id: str, db=Depends(get_db)) -> ContentOut:
+    item = db.get(ContentItem, content_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="not_found")
+    return item  # type: ignore[return-value]
+
+
+@api.get("/content", response_model=list[ContentOut])
+def list_content(limit: int = 20, offset: int = 0, db=Depends(get_db)) -> list[ContentOut]:
+    q = db.query(ContentItem).order_by(ContentItem.created_at.desc()).offset(offset).limit(limit)
+    return list(q)
 
 
 # Async generation endpoints (Celery) - only if broker explicitly configured

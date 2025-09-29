@@ -8,7 +8,11 @@ from fastapi import FastAPI
 from starlette.responses import Response
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Gauge, generate_latest
 
+from sqlalchemy import inspect
+
 from app.routes import register_routes
+from app.db import engine
+from app.models import Base
 from app.settings import get_settings
 
 
@@ -47,6 +51,14 @@ def create_app() -> FastAPI:
         return Response(content=data, media_type=CONTENT_TYPE_LATEST)
 
     register_routes(app)
+    # Ensure tables exist (basic bootstrap for dev/test). In production, use migrations.
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("content_items"):
+            Base.metadata.create_all(bind=engine)
+    except Exception:
+        # Do not fail the app if DB is unavailable during startup.
+        pass
     return app
 
 
