@@ -1,7 +1,7 @@
 """Configuration handling for the Content automation service."""
 
 from functools import lru_cache
-from typing import List
+from typing import List, Optional, List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -13,7 +13,7 @@ class ContentSettings(BaseSettings):
 
     app_name: str = "plasma-engine-content"
     cors_origins: List[str] = ["http://localhost:3000"]
-    openai_api_key: str | None = None
+    openai_api_key: Optional[str] = None
 
 
 @lru_cache
