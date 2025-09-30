@@ -1,12 +1,14 @@
 """FastAPI bootstrap for the Content automation service."""
 
+from typing import Optional
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import ContentSettings, get_settings
 
 
-def create_app(settings: ContentSettings | None = None) -> FastAPI:
+def create_app(settings: Optional[ContentSettings] = None) -> FastAPI:
     """Return a configured FastAPI application instance."""
 
     resolved_settings = settings or get_settings()
